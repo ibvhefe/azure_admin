@@ -11,14 +11,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using AzureAdmin.Data;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace AzureAdmin.Controllers
 {
@@ -30,50 +28,52 @@ namespace AzureAdmin.Controllers
 
         public AdminController(ILogger<AdminController> logger)
         {
-            _logger = logger;
+            this._logger = logger;
         }
 
-        [HttpGet("RemoveAppxPackage")]
-        public IActionResult RemoveAppxPackage(string appId)
+        [HttpGet("ExecutePowershellScript")]
+        public IActionResult ExecutePowershellScript(String path)
         {
             var response = new HttpResponseMessage(HttpStatusCode.OK);
             try
             {
-                var proc = Powershell.RemoveAppxPackage(appId);
+                var result = ExecuteScript(path);
 
-                if(!proc.ExitCode)
-                    return Conflict(proc);
+                if (!String.IsNullOrEmpty(result.Error))
+                {
+                    return Conflict(result.Error);
+                }
 
-                return Ok(proc);
+                return Ok(result.Output);
             }
             catch (Exception ex)
             {
-                _logger.LogError("1", ex, "AdminController");
+                this._logger.LogError("1", ex, "AdminController");
                 return StatusCode(500);
             }
         }
 
-        [HttpGet("RemoveAppxPackages")]
-        public IActionResult RemoveAppxPackages(List<string> appIds)
+        private OutputErrorPair ExecuteScript(String pathToScript)
         {
-            try
-            {
-                var results = new List<ShellInvokeRequest>();
-                
-                foreach(var appId in appIds)
-                    results.Add(Powershell.RemoveAppxPackage(appId));
+            var scriptArguments = "-ExecutionPolicy Bypass -File \"" + pathToScript + "\"";
+            var processStartInfo = new ProcessStartInfo("powershell.exe", scriptArguments);
+            processStartInfo.RedirectStandardOutput = true;
+            processStartInfo.RedirectStandardError = true;
 
-                var fail = results.Any(x => !x.ExitCode);
-                if(fail)
-                    return Conflict(results);
-                
-                return Ok(results);
-            }
-            catch (Exception ex)
+            using (var process = new Process())
             {
-                _logger.LogError(ex.ToString());
-                return StatusCode(500);
+                process.StartInfo = processStartInfo;
+                process.Start();
+                var output = process.StandardOutput.ReadToEnd();
+                var error = process.StandardError.ReadToEnd();
+                return new OutputErrorPair { Output = output, Error = error };
             }
+        }
+
+        private class OutputErrorPair
+        {
+            public String Error { get; set; } = String.Empty;
+            public String Output { get; set; } = String.Empty;
         }
     }
 }
