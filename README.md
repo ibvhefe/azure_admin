@@ -1,6 +1,6 @@
 # Run powershell script as admin
 
-This derives from the azure admin project with one custom controller, which allows for this:
+This derives from the azure admin project with one custom controller, which allows for executing files from the repository.
 
 Azure yaml task example:
 ```
