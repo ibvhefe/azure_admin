@@ -1,3 +1,22 @@
+# Run powershell script as admin
+
+This derives from the azure admin project with one custom controller, which allows for this:
+
+Azure yaml task example:
+```
+- task: PowerShell@2
+  displayName: "Run powershell in admin mode"
+  inputs:
+    targetType: 'inline'
+    script: |  
+      $scriptPath = "$(System.DefaultWorkingDirectory)\scripts\SampleScript.ps1" #lies in repository
+      $url = "http://localhost:5005/Admin/ExecutePowershellScript?path=$($scriptPath)"
+      $pipeline = Invoke-RestMethod -Uri $url -Method Get;
+      Write-Host "Pipeline = $($pipeline | ConvertTo-Json -Depth 100)"
+```
+
+# Installation guide from the original project
+
 * Azure Admin
 Access Elevated Privileged Operations with Azure Self-Hosted Pipelines
 
@@ -23,18 +42,3 @@ dotnet publish -o $Path
 sc.exe create AzureAdmin binpath= $Path\AzureAdmin.exe
 sc.exe start AzureAdmin
 ```
-
-* Azure Yaml Task Example 
-
-```
-- task: PowerShell@2
-  inputs:
-    targetType: 'inline'
-    script: |  
-        $url = "http://localhost:5005/removeallappxpackages"
-        $pipeline = Invoke-RestMethod -Uri $url -Method Get;
-        Write-Host "Pipeline = $($pipeline | ConvertTo-Json -Depth 100)"
-```
-
-* Project Goal List 
-    * Authentication
